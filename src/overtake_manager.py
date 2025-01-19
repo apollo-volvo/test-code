@@ -14,22 +14,16 @@ class OvertakeManager:
         self.vel_publisher = rospy.Publisher(cmd_vel_topic, Twist, queue_size=10)
         self.cmd = Twist()
 
-        self.ctrl_c = False
-        self.is_overtaking = False
         self.rate = rospy.Rate(1)
         
     def detect_callback(self, msg):
-        # Check if an overtaking sequence is already ongoing
-        if self.is_overtaking:
-            return
-        
         for box in msg.bounding_boxes:
             if box.Class == 'car' and box.probability > 0.5:
                 # Assume a bounding box position correlates with the lane center
+                self.bounding_boxes_sub.unregister()
                 self.vehicle_detected = True
-                self.is_overtaking = True
                 self.overtake()
-                self.is_overtaking = False
+                self.bounding_boxes_sub = rospy.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, self.detect_callback)
                 return
         self.vehicle_detected = False
 
@@ -76,26 +70,26 @@ class OvertakeManager:
         rospy.loginfo("Starting overtake sequence...")
 
         # Step 1: stop in front of car
-        rospy.loginfo("Stop car")
         self.stop_robot()
+        rospy.loginfo("Stop car")
         # self.move_straight_time("forward", 0.15, 2)
 
         # Step 2: head towards other lane
+        self.turn("clockwise", 0.2, 1)
+        self.move_straight_time("forward", 0.1, 1.5)
+        self.turn("anticlockwise", 0.2, 1)
         rospy.loginfo("moving to next lane")
-        self.turn("clockwise", 0.3, 1)
-        self.move_straight_time("forward", 0.15, 1.5)
-        self.turn("anticlockwise", 0.3, 1)
 
         # Step 3: move in other lane
+        self.move_straight_time("forward", 0.1, 3)
         rospy.loginfo("Moving past obstacle")
-        self.move_straight_time("forward", 0.2, 3)
 
         # Step 4: head back to original lane
-        rospy.loginfo("Moving back to original lane")
         self.stop_robot()
-        self.turn("anticlockwise", 0.3, 1)
-        self.move_straight_time("forward", 0.15, 1.5)
-        self.turn("clockwise", 0.3, 1)
+        self.turn("anticlockwise", 0.2, 1)
+        self.move_straight_time("forward", 0.1, 1.5)
+        self.turn("clockwise", 0.2, 1)
+        rospy.loginfo("Moving back to original lane")
 
         self.stop_robot()
         rospy.loginfo("overtake Sequence complete!")
