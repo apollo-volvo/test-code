@@ -4,7 +4,7 @@ import rospy
 from geometry_msgs.msg import Twist
 import requests
 
-
+# RobotControl class is the first code to get the robot out of the carpark
 class RobotControl:
 
     def __init__(self, robot_name="turtlebot", arduino_ip="10.183.111.239"):
@@ -36,35 +36,52 @@ class RobotControl:
         self.stop_robot()
 
     def stop_robot(self):
-        self.cmd.linear.x = 0.0
-        self.cmd.angular.z = 0.0
-        self.publish_once_in_cmd_vel()
-
-    def move_straight_time(self, motion, speed, duration):
         self.cmd.linear.y = 0
         self.cmd.linear.z = 0
         self.cmd.angular.x = 0
         self.cmd.angular.y = 0
         self.cmd.angular.z = 0
+        self.publish_once_in_cmd_vel()
 
-        self.cmd.linear.x = speed if motion == "forward" else -speed
+    # def move_straight_time(self, motion, speed, duration):
+    #     linear_speed = speed if motion == "forward" else -speed
+    #     start_time = rospy.Time.now()
+    #     while ((rospy.Time.now() - start_time).to_sec() < duration):
+    #         # Move forward for duration seconds
+    #         self.cmd.linear.x = linear_speed
+    #         self.cmd.angular.z = 0.0
+    #         self.rate.sleep()
+    #     self.stop_robot()
 
+    def move_straight_time(self, motion, speed, duration):
+        # Set linear speed based on motion direction
+        linear_speed = speed if motion == "forward" else -speed
+        
+        # Record the start time
         start_time = rospy.Time.now()
+        
+        # Loop until the specified duration has passed
         while (rospy.Time.now() - start_time).to_sec() < duration:
+            # Set the robot's linear and angular velocities
+            self.cmd.linear.x = linear_speed
+            self.cmd.angular.z = 0.0
+            
+            # Publish the velocity command
             self.vel_publisher.publish(self.cmd)
-            self.rate.sleep()
-
+            
+            # Sleep for the remainder of the loop cycle
+        
+        # Stop the robot after moving
         self.stop_robot()
 
     def turn(self, clockwise, speed, duration):
-        self.cmd.linear.x = 0
-        self.cmd.angular.z = speed if clockwise != "clockwise" else -speed
-
+        turn_speed = speed if clockwise != "clockwise" else -speed
         start_time = rospy.Time.now()
-        while (rospy.Time.now() - start_time).to_sec() < duration:
+        while ((rospy.Time.now() - start_time).to_sec() < duration):
+            # Move forward for duration seconds
+            self.cmd.linear.x = 0.0
+            self.cmd.angular.z = turn_speed
             self.vel_publisher.publish(self.cmd)
-            self.rate.sleep()
-
         self.stop_robot()
 
     def send_command(self, command):
@@ -83,17 +100,17 @@ class RobotControl:
 
         # Step 1: Move out of parking lot
         rospy.loginfo("Exiting parking lot...")
-        self.move_straight_time("forward", 0.2, 3)
-        self.turn("clockwise", 0.5, 2)
+        self.move_straight_time("forward", 0.15, 2)
+        self.turn("anticlockwise", 0.3, 6)
 
         # Step 2: Open gantry
         rospy.loginfo("Opening gantry...")
         self.send_command("open")
-        rospy.sleep(2)
+        rospy.sleep(1)
 
         # Step 3: Move past gantry
         rospy.loginfo("Moving past gantry...")
-        self.move_straight_time("forward", 0.2, 5)
+        self.move_straight_time("forward", 0.2, 2)
 
         # Step 4: Close gantry
         rospy.loginfo("Closing gantry...")
@@ -105,6 +122,7 @@ class RobotControl:
 if __name__ == '__main__':
     robotcontrol = RobotControl()
     try:
+        #robotcontrol.turn("clockwise", 0.5, 3)
         robotcontrol.execute_sequence()
     except rospy.ROSInterruptException:
         pass

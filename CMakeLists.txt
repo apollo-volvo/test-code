@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   image_transport
   cv_bridge
+  camera_info_manager
+  darknet_ros_msgs
 )
 
 ## System dependencies are found with CMake's conventions
