@@ -18,11 +18,18 @@ class OvertakeManager:
         
     def detect_callback(self, msg):
         for box in msg.bounding_boxes:
-            if box.Class == 'car' and box.probability > 0.5:
+            if (box.Class == 'car' or 'suitcase' or 'phone') and box.probability > 0.5:
                 # Assume a bounding box position correlates with the lane center
                 self.bounding_boxes_sub.unregister()
                 self.vehicle_detected = True
                 self.overtake()
+                self.bounding_boxes_sub = rospy.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, self.detect_callback)
+                return
+            if (box.Class == 'person' or 'bottle') and box.probability > 0.5:
+                # Assume a bounding box position correlates with the lane center
+                self.bounding_boxes_sub.unregister()
+                self.vehicle_detected = True
+                self.wait_for_pedestrian()
                 self.bounding_boxes_sub = rospy.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, self.detect_callback)
                 return
         self.vehicle_detected = False
@@ -93,6 +100,13 @@ class OvertakeManager:
 
         self.stop_robot()
         rospy.loginfo("overtake Sequence complete!")
+
+    def wait_for_pedestrian(self):
+        rospy.loginfo("wait for pedestrian...")
+
+        # Step 1: stop in front of car
+        self.stop_robot()
+        rospy.sleep(3)
 
 if __name__ == '__main__':
     try:

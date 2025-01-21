@@ -102,6 +102,7 @@ class RobotControl:
         rospy.loginfo("Exiting parking lot...")
         self.move_straight_time("forward", 0.15, 2)
         self.turn("anticlockwise", 0.3, 6)
+        self.move_straight_time("forward", 0.15, 2)
 
         # Step 2: Open gantry
         rospy.loginfo("Opening gantry...")
